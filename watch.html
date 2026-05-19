@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cinescope — Watch</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Bebas Neue"', 'cursive'],
+            body:    ['"DM Sans"', 'sans-serif'],
+          },
+          colors: {
+            bg:      '#09090f',
+            surface: '#111118',
+            card:    '#18181f',
+            border:  '#272736',
+            accent:  '#e8c547',
+            danger:  '#c4395e',
+            muted:   '#64647a',
+            light:   '#eeecea',
+          },
+        },
+      },
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; font-weight: 300; background: #09090f; }
+
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 9999;
+    }
+
+    /* Player */
+    #playerWrap { position: relative; aspect-ratio: 16/9; background: #000; width: 100%; }
+    #playerWrap iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+
+    /* Spinner */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { width: 36px; height: 36px; border: 3px solid #272736; border-top-color: #e8c547; border-radius: 50%; animation: spin .8s linear infinite; }
+
+    /* Shimmer */
+    @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+    .shimmer-rec { position: relative; overflow: hidden; flex: 0 0 150px; aspect-ratio: 2/3; background: #18181f; }
+    .shimmer-rec::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg,transparent,rgba(255,255,255,.04),transparent); animation: shimmer 1.5s infinite; }
+
+    /* Rec scroll */
+    #recScroll { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+    #recScroll::-webkit-scrollbar { height: 3px; }
+    #recScroll::-webkit-scrollbar-track { background: #09090f; }
+    #recScroll::-webkit-scrollbar-thumb { background: #272736; }
+
+    .rec-card { flex: 0 0 150px; scroll-snap-align: start; cursor: pointer; position: relative; overflow: hidden; aspect-ratio: 2/3; background: #18181f; }
+    .rec-card img { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(.8) saturate(.7); transition: filter .3s, transform .45s; }
+    .rec-card:hover img { filter: brightness(1) saturate(1); transform: scale(1.05); }
+    .rec-label { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 10px; background: linear-gradient(to top, rgba(9,9,15,.96) 0%, transparent 60%); opacity: 0; transition: opacity .3s; }
+    .rec-card:hover .rec-label { opacity: 1; }
+
+    /* Resume banner slide-down */
+    #resumeBanner { animation: slideDown .4s ease both; }
+    @keyframes slideDown { from { opacity:0; transform: translateY(-12px); } to { opacity:1; transform: translateY(0); } }
+
+    select { appearance: none; -webkit-appearance: none; }
+
+    ::-webkit-scrollbar { width: 3px; }
+    ::-webkit-scrollbar-track { background: #09090f; }
+    ::-webkit-scrollbar-thumb { background: #272736; }
+  </style>
+</head>
+
+<body class="text-light min-h-screen">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 bg-bg/90 backdrop-blur-md border-b border-border px-5 md:px-12 py-3 flex items-center justify-between">
+    <a href="index.html" class="font-display text-3xl tracking-widest leading-none">
+      Cine<span class="text-accent">scope</span>
+    </a>
+    <span class="text-muted text-xs tracking-widest uppercase hidden sm:block">Now Playing</span>
+  </header>
+
+  <!-- RESUME BANNER (shown if previous progress exists) -->
+  <div id="resumeBanner" class="hidden border-b border-accent/30 bg-accent/5">
+    <div class="max-w-5xl mx-auto px-5 md:px-12 py-3 flex items-center gap-4 flex-wrap">
+      <!-- Progress bar -->
+      <div class="flex-1 min-w-[120px] flex flex-col gap-1.5">
+        <span id="resumeText" class="text-xs tracking-widest uppercase text-accent"></span>
+        <div class="w-full h-1 bg-border overflow-hidden">
+          <div id="resumeBar" class="h-full bg-accent transition-all" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        <span class="text-muted text-xs tracking-wide">Continue where you left off?</span>
+        <button
+          onclick="dismissResume()"
+          class="text-xs tracking-widest uppercase border border-border text-muted hover:border-danger hover:text-danger transition-colors px-3 py-1.5">
+          Start Over
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BACKDROP TINT -->
+  <div id="backdropTint" class="fixed inset-0 -z-10 bg-cover bg-center opacity-0 transition-opacity duration-1000" style="filter:brightness(.12) saturate(.5)"></div>
+
+  <main class="max-w-5xl mx-auto px-5 md:px-12 py-8 flex flex-col gap-10">
+
+    <!-- PLAYER -->
+    <div id="playerWrap" class="shadow-2xl ring-1 ring-border">
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- EPISODE CONTROLS (TV only) -->
+    <div id="episodeControls" class="hidden flex-wrap gap-3 items-center border border-border p-4 bg-surface">
+      <span class="text-muted text-xs tracking-widest uppercase shrink-0">Season</span>
+      <select id="seasonSelect" onchange="onSeasonChange()"
+              class="bg-bg border border-border text-light text-sm px-3 py-2 pr-8 cursor-pointer hover:border-accent transition-colors"
+              style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364647a%22 stroke-width=%222.5%22><path d=%22M6 9l6 6 6-6%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;background-size:12px">
+      </select>
+      <span class="text-muted text-xs tracking-widest uppercase shrink-0">Episode</span>
+      <select id="episodeSelect"
+              class="bg-bg border border-border text-light text-sm px-3 py-2 pr-8 cursor-pointer hover:border-accent transition-colors flex-1 min-w-0 max-w-xs"
+              style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364647a%22 stroke-width=%222.5%22><path d=%22M6 9l6 6 6-6%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;background-size:12px">
+      </select>
+      <button onclick="playEpisode()"
+              class="bg-accent hover:bg-yellow-300 transition-colors text-bg font-display tracking-widest px-5 py-2 text-sm shrink-0">
+        ▶ Play
+      </button>
+    </div>
+
+    <!-- MOVIE INFO -->
+    <section id="movieInfo"></section>
+
+    <!-- BECAUSE YOU WATCHED -->
+    <section class="flex flex-col gap-4">
+      <div class="flex items-baseline gap-3 border-b border-border pb-3">
+        <h2 class="font-display text-2xl tracking-widest">Because you watched</h2>
+        <span id="recMovieName" class="text-accent text-sm tracking-wide truncate"></span>
+      </div>
+      <div id="recScroll">
+        <div class="shimmer-rec"></div><div class="shimmer-rec"></div>
+        <div class="shimmer-rec"></div><div class="shimmer-rec"></div>
+        <div class="shimmer-rec"></div><div class="shimmer-rec"></div>
+        <div class="shimmer-rec"></div><div class="shimmer-rec"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="watch.js"></script>
+</body>
+</html>
