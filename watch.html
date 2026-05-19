@@ -84,7 +84,10 @@
     <a href="index.html" class="font-display text-3xl tracking-widest leading-none">
       Cine<span class="text-accent">scope</span>
     </a>
-    <span class="text-muted text-xs tracking-widest uppercase hidden sm:block">Now Playing</span>
+    <div class="flex items-center gap-3">
+      <span class="text-muted text-xs tracking-widest uppercase hidden sm:block">Now Playing</span>
+      <div id="authSlot" class="flex items-center gap-2"></div>
+    </div>
   </header>
 
   <!-- RESUME BANNER (shown if previous progress exists) -->
@@ -157,6 +160,21 @@
 
   </main>
 
-  <script src="watch.js"></script>
+  <div id="authModal" class="hidden fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm p-5 flex items-center justify-center">
+    <form id="authForm" class="w-full max-w-sm bg-surface border border-border p-5 flex flex-col gap-3">
+      <div class="flex items-center justify-between gap-4">
+        <h2 id="authTitle" class="font-display text-3xl tracking-widest">Login</h2>
+        <button type="button" data-close-auth class="nav-btn" aria-label="Close">&times;</button>
+      </div>
+      <input id="nameField" name="displayName" class="hidden bg-bg border border-border text-light px-3 py-2 outline-none focus:border-accent" placeholder="Display name" />
+      <input name="email" type="email" required class="bg-bg border border-border text-light px-3 py-2 outline-none focus:border-accent" placeholder="Email" />
+      <input name="password" type="password" required minlength="6" class="bg-bg border border-border text-light px-3 py-2 outline-none focus:border-accent" placeholder="Password" />
+      <p id="authError" class="min-h-5 text-danger text-xs"></p>
+      <button id="authSubmit" class="nav-btn nav-btn-primary" type="submit">Login</button>
+      <button id="authModeToggle" class="text-muted hover:text-accent text-xs uppercase tracking-widest" type="button">Create new account</button>
+    </form>
+  </div>
+
+  <script type="module" src="/src/pages/watch.js"></script>
 </body>
 </html>

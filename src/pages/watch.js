@@ -3,7 +3,11 @@
 //  Includes: progress tracking, resume, history
 // ─────────────────────────────────────────────
 
-const TMDB_KEY  = '2a90a66535588ab6ad8c190707a04852';
+import '../styles/app.css';
+import { initUserSession, getProgress as loadProgress, saveHistoryEntry, saveProgressEntry } from '../services/userData.js';
+import { mountAuthUi } from '../services/authUi.js';
+
+const TMDB_KEY  = import.meta.env.VITE_TMDB_KEY;
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const IMG       = 'https://image.tmdb.org/t/p/';
 
@@ -54,6 +58,9 @@ async function fetchTMDB(path, extraParams = {}) {
 
 // ── INIT ────────────────────────────────────
 async function init() {
+  initUserSession();
+  mountAuthUi();
+
   if (!id) {
     playerWrap.innerHTML = `<div class="absolute inset-0 flex items-center justify-center">
       <p class="text-danger text-xs tracking-widest uppercase">No title specified.
@@ -97,7 +104,7 @@ async function init() {
     } else {
       loadPlayer();
     }
-    saveHistory(data);
+    await saveHistory(data);
     loadRecs(data.title || data.name);
     startProgressTracking();
 
@@ -123,16 +130,16 @@ function mainProgressKey() {
 function historyKey()   { return 'cs_watch_history'; }
 
 function getProgress() {
-  try { return JSON.parse(localStorage.getItem(progressKey())); } catch { return null; }
+  return loadProgress(type, id, currentSeason, currentEpisode);
 }
 
 function getMainProgress() {
   // For TV shows, get the main entry to find last watched episode
   if (type !== 'tv') return null;
-  try { return JSON.parse(localStorage.getItem(mainProgressKey())); } catch { return null; }
+  return loadProgress(type, id);
 }
 
-function saveProgress(pct) {
+async function saveProgress(pct) {
   if (!movieData) return;
   try {
     const entry = {
@@ -151,15 +158,8 @@ function saveProgress(pct) {
       entry.episode = currentEpisode;
     }
     
-    localStorage.setItem(progressKey(), JSON.stringify(entry));
-    
-    // For TV, also save main progress entry with last episode info
-    if (type === 'tv' && currentSeason && currentEpisode) {
-      const mainEntry = { ...entry };
-      localStorage.setItem(mainProgressKey(), JSON.stringify(mainEntry));
-    }
-    
-    updateHistory(entry);
+    await saveProgressEntry(entry, currentSeason, currentEpisode);
+    await updateHistory(entry);
   } catch {}
 }
 
@@ -168,17 +168,14 @@ function markFinished() {
 }
 
 // ── HISTORY ─────────────────────────────────
-function updateHistory(entry) {
+async function updateHistory(entry) {
   try {
-    let h = JSON.parse(localStorage.getItem(historyKey()) || '[]');
-    h = h.filter(i => !(i.id === entry.id && i.type === entry.type));
-    h.unshift(entry);
-    localStorage.setItem(historyKey(), JSON.stringify(h.slice(0, 40)));
+    await saveHistoryEntry(entry);
   } catch {}
 }
 
-function saveHistory(m) {
-  updateHistory({
+async function saveHistory(m) {
+  await updateHistory({
     id, type,
     title:    m.title || m.name || '',
     poster:   m.poster_path   || null,
@@ -417,6 +414,8 @@ async function populateEpisodes(autoEpisode) {
 function playEpisode() {
   const s = document.getElementById('seasonSelect').value;
   const e = document.getElementById('episodeSelect').value;
+  currentSeason = s;
+  currentEpisode = e;
   loadPlayer(s, e);
 }
 
@@ -481,4 +480,10 @@ function escHtml(s) {
 }
 
 // ── START ─────────────────────────────────────
+Object.assign(window, {
+  dismissResume,
+  onSeasonChange,
+  playEpisode,
+});
+
 init();

@@ -1,295 +1,147 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" class="scroll-smooth">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CINESCOPE</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-  
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: {
-            display: ['"Bebas Neue"', 'cursive'],
-            body:    ['"DM Sans"', 'sans-serif'],
-          },
-          colors: {
-            bg:      '#09090f',
-            surface: '#111118',
-            card:    '#18181f',
-            border:  '#272736',
-            accent:  '#e8c547',
-            danger:  '#c4395e',
-            muted:   '#64647a',
-            light:   '#eeecea',
-          },
-          keyframes: {
-            fadeUp:  { '0%': { opacity:'0', transform:'translateY(16px)' }, '100%': { opacity:'1', transform:'translateY(0)' } },
-            shimmer: { '0%': { transform:'translateX(-100%)' }, '100%': { transform:'translateX(100%)' } },
-            fadeIn:  { '0%': { opacity:'0', transform:'translateY(6px) scale(.97)' }, '100%': { opacity:'1', transform:'translateY(0) scale(1)' } },
-          },
-          animation: {
-            fadeUp:  'fadeUp 0.4s ease both',
-            shimmer: 'shimmer 1.5s infinite',
-            fadeIn:  'fadeIn 0.18s ease both',
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cinescope</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              display: ['"Bebas Neue"', 'cursive'],
+              body: ['"DM Sans"', 'sans-serif'],
+            },
+            colors: {
+              bg: '#09090f',
+              surface: '#111118',
+              card: '#18181f',
+              border: '#272736',
+              accent: '#e8c547',
+              danger: '#c4395e',
+              muted: '#64647a',
+              light: '#eeecea',
+            },
           },
         },
-      },
-    }
-  </script>
-
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-
-  <style>
-    *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: 'DM Sans', sans-serif; font-weight: 300; }
-
-    body::before {
-      content: ''; position: fixed; inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-      pointer-events: none; z-index: 9999;
-    }
-
-    /* Banner */
-    #banner { position: relative; height: 540px; overflow: hidden; background: #111118; }
-    @media(max-width:640px){ #banner { height: 400px; } }
-    .banner-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.9s ease; pointer-events: none; }
-    .banner-slide.active { opacity: 1; pointer-events: all; }
-    .banner-bg { position: absolute; inset: 0; background-size: cover; background-position: center; transform: scale(1.05); transition: transform 9s ease; filter: brightness(.32) saturate(.65); }
-    .banner-slide.active .banner-bg { transform: scale(1); }
-    .banner-fade { position: absolute; inset: 0; background: linear-gradient(to top, #09090f 0%, rgba(9,9,15,.55) 50%, transparent 100%); }
-    .banner-dot { width: 6px; height: 6px; background: #272736; transition: background .3s, width .3s; }
-    .banner-dot.active { background: #e8c547; width: 22px; }
-    .banner-shimmer { position: absolute; inset: 0; }
-    .banner-shimmer::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg,transparent,rgba(255,255,255,.03),transparent); animation: shimmer 2s infinite; }
-
-    /* Cards */
-    .card-img { transition: transform 0.55s ease, filter 0.3s; filter: brightness(.85) saturate(.75); }
-    .movie-card:hover .card-img { transform: scale(1.07); filter: brightness(1) saturate(1); }
-    .card-overlay { opacity: 0; transition: opacity 0.3s; }
-    .movie-card:hover .card-overlay { opacity: 1; }
-
-    /* Shimmer */
-    .shimmer-bar { position: relative; overflow: hidden; }
-    .shimmer-bar::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg,transparent,rgba(255,255,255,.045),transparent); animation: shimmer 1.5s infinite; }
-
-    /* Modal */
-    #modalBackdrop { transition: opacity 0.25s; }
-    #modal { transition: transform 0.35s cubic-bezier(0.16,1,0.3,1); max-height: 90vh; overflow-y: auto; }
-    #modalBackdrop.open { opacity: 1; pointer-events: all; }
-    #modalBackdrop.open #modal { transform: translateY(0); }
-
-    #yearDropdown { animation: fadeIn 0.18s ease both; }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner-ring { animation: spin 0.75s linear infinite; }
-
-    /* Continue Watching scroll */
-    #continueScroll {
-      display: flex; gap: 8px; overflow-x: auto;
-      padding-bottom: 6px; scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-    }
-    #continueScroll::-webkit-scrollbar { height: 3px; }
-    #continueScroll::-webkit-scrollbar-track { background: #09090f; }
-    #continueScroll::-webkit-scrollbar-thumb { background: #272736; }
-
-    ::-webkit-scrollbar { width: 3px; }
-    ::-webkit-scrollbar-track { background: #09090f; }
-    ::-webkit-scrollbar-thumb { background: #272736; border-radius: 2px; }
-
-    #searchInput:focus { outline: none; }
-    #sentinel { height: 2px; }
-    select { -webkit-appearance: none; appearance: none; }
-
-    #filterBar { transition: max-height 0.3s ease, opacity 0.3s; max-height: 0; opacity: 0; overflow: hidden; }
-    #filterBar.open { max-height: 140px; opacity: 1; }
-    .filter-input:focus { outline: none; border-color: #e8c547; }
-    .filter-chip { transition: background .2s, color .2s, border-color .2s; }
-    .filter-chip.active { background: #e8c547; color: #09090f; border-color: #e8c547; }
-  </style>
-</head>
-
-<body class="bg-bg text-light min-h-screen overflow-x-hidden">
-
-  <!-- ── STICKY HEADER ── -->
-  <header class="sticky top-0 z-40 bg-bg/90 backdrop-blur-md border-b border-border">
-    <div class="px-5 md:px-12 py-3 flex items-center gap-3 flex-wrap">
-
-      <button onclick="resetToHome()" class="font-display text-3xl md:text-4xl tracking-widest leading-none shrink-0">
-        Cine<span class="text-accent">scope</span>
-      </button>
-
-      <div class="flex flex-1 min-w-[180px] max-w-lg border border-border focus-within:border-accent transition-colors duration-200 bg-surface">
-        <input id="searchInput" type="text" placeholder="Search movies, TV shows…" autocomplete="off"
-               class="flex-1 bg-transparent px-4 py-2.5 text-sm text-light placeholder-muted tracking-wide"/>
-        <button id="clearBtn" onclick="clearSearch()" class="hidden px-3 text-muted hover:text-light transition-colors text-base leading-none">✕</button>
-        <button onclick="triggerSearch()" class="bg-accent hover:bg-yellow-300 transition-colors px-5 font-display text-base tracking-widest text-bg shrink-0">Go</button>
+      };
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="sticky top-0 z-50 bg-bg/90 backdrop-blur-md border-b border-border px-5 md:px-12 py-3 flex items-center gap-4">
+      <a href="/" class="font-display text-3xl tracking-widest leading-none shrink-0">Cine<span class="text-accent">scope</span></a>
+      <div class="relative flex-1 max-w-xl">
+        <input id="searchInput" class="w-full bg-card border border-border text-light text-sm px-4 py-2.5 pr-10 outline-none focus:border-accent" placeholder="Search movies and shows" />
+        <button id="clearBtn" onclick="clearSearch()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-accent px-2" aria-label="Clear search">&times;</button>
       </div>
+      <div id="authSlot" class="flex items-center gap-2 shrink-0"></div>
+    </header>
 
-      <div id="sortWrap" class="hidden shrink-0">
-        <select id="sortSelect" onchange="onSortChange()"
-                class="bg-surface border border-border text-muted text-xs tracking-widest uppercase px-3 py-2.5 pr-8 cursor-pointer hover:border-accent hover:text-light transition-colors"
-                style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364647a%22 stroke-width=%222.5%22><path d=%22M6 9l6 6 6-6%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;background-size:12px">
-          <option value="smart">★ Smart Sort</option>
-          <option value="rating">Top Rated</option>
-          <option value="popularity">Most Popular</option>
-          <option value="year_desc">Newest First</option>
-          <option value="year_asc">Oldest First</option>
-          <option value="relevance">Most Relevant</option>
-        </select>
-      </div>
-
-      <button onclick="toggleFilterBar()"
-              class="shrink-0 flex items-center gap-2 border border-border hover:border-accent transition-colors px-4 py-2.5 text-xs tracking-widest uppercase text-muted hover:text-accent bg-surface">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-        Filters
-        <span id="filterCount" class="hidden bg-accent text-bg text-xs font-display px-1.5 leading-tight">0</span>
-      </button>
-
-      <div class="relative shrink-0" id="yearPickerWrap">
-        <button onclick="toggleYearPicker()"
-                class="flex items-center gap-2 border border-border hover:border-accent transition-colors px-4 py-2.5 text-xs tracking-widest uppercase text-muted hover:text-accent bg-surface">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
-          </svg>
-          <span id="yearLabel">All Years</span>
-          <svg id="yearChevron" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div id="yearDropdown" class="hidden absolute right-0 top-full mt-2 bg-surface border border-border shadow-2xl z-50" style="width:272px">
-          <div class="flex items-center justify-between px-4 py-3 border-b border-border">
-            <button onclick="shiftDecade(-1)" class="text-muted hover:text-accent text-xl leading-none transition-colors px-1">‹</button>
-            <span id="decadeLabel" class="font-display tracking-widest text-sm text-light"></span>
-            <button onclick="shiftDecade(+1)" class="text-muted hover:text-accent text-xl leading-none transition-colors px-1">›</button>
-          </div>
-          <div id="yearGrid" class="grid grid-cols-4 gap-1 p-3"></div>
-          <div class="border-t border-border px-3 py-2">
-            <button onclick="selectYear(null)" class="w-full text-xs tracking-widest uppercase text-muted hover:text-accent transition-colors py-1">Clear — All Years</button>
-          </div>
+    <main>
+      <section id="bannerWrap" class="relative h-[58vh] min-h-[420px] max-h-[640px] overflow-hidden border-b border-border">
+        <div id="banner" class="absolute inset-0">
+          <div class="banner-shimmer absolute inset-0 bg-card"></div>
         </div>
-      </div>
-    </div>
-
-    <!-- FILTER BAR -->
-    <div id="filterBar" class="border-t border-border bg-surface/60">
-      <div class="px-5 md:px-12 py-3 flex flex-wrap gap-4 items-end">
-        <div class="flex flex-col gap-1.5">
-          <span class="text-xs tracking-widest uppercase text-muted">Type</span>
-          <div class="flex gap-1.5">
-            <button onclick="setTypeFilter('all')"   id="typeAll"   class="filter-chip active text-xs tracking-widest uppercase px-3 py-1.5 border border-border">All</button>
-            <button onclick="setTypeFilter('movie')" id="typeMovie" class="filter-chip text-xs tracking-widest uppercase px-3 py-1.5 border border-border text-muted hover:border-accent hover:text-accent">Movie</button>
-            <button onclick="setTypeFilter('tv')"    id="typeTv"    class="filter-chip text-xs tracking-widest uppercase px-3 py-1.5 border border-border text-muted hover:border-accent hover:text-accent">TV Show</button>
-          </div>
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <span class="text-xs tracking-widest uppercase text-muted">Genre</span>
-          <select id="genreSelect" onchange="setGenreFilter(this.value)"
-                  class="filter-input bg-bg border border-border text-muted text-xs tracking-widest uppercase px-3 py-1.5 pr-8 cursor-pointer hover:border-accent hover:text-light transition-colors"
-                  style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364647a%22 stroke-width=%222.5%22><path d=%22M6 9l6 6 6-6%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;background-size:12px">
-            <option value="">All Genres</option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <span class="text-xs tracking-widest uppercase text-muted">Min Rating</span>
-          <select id="ratingSelect" onchange="setRatingFilter(this.value)"
-                  class="filter-input bg-bg border border-border text-muted text-xs tracking-widest uppercase px-3 py-1.5 pr-8 cursor-pointer hover:border-accent hover:text-light transition-colors"
-                  style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364647a%22 stroke-width=%222.5%22><path d=%22M6 9l6 6 6-6%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;background-size:12px">
-            <option value="">Any</option>
-            <option value="9">★ 9+</option><option value="8">★ 8+</option>
-            <option value="7">★ 7+</option><option value="6">★ 6+</option><option value="5">★ 5+</option>
-          </select>
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <span class="text-xs tracking-widest uppercase text-muted">Min Votes</span>
-          <select id="votesSelect" onchange="setVotesFilter(this.value)"
-                  class="filter-input bg-bg border border-border text-muted text-xs tracking-widest uppercase px-3 py-1.5 pr-8 cursor-pointer hover:border-accent hover:text-light transition-colors"
-                  style="background-image:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%2364647a%22 stroke-width=%222.5%22><path d=%22M6 9l6 6 6-6%22/></svg>');background-repeat:no-repeat;background-position:right 8px center;background-size:12px">
-            <option value="">Any</option>
-            <option value="10000">10k+</option><option value="50000">50k+</option>
-            <option value="100000">100k+</option><option value="500000">500k+</option>
-          </select>
-        </div>
-        <button onclick="clearAllFilters()" class="text-xs tracking-widest uppercase text-muted hover:text-danger transition-colors py-1.5 self-end ml-auto">Clear Filters</button>
-      </div>
-    </div>
-  </header>
-
-  <!-- ── BANNER ── -->
-  <div id="bannerWrap">
-    <div id="banner"><div class="banner-shimmer"></div></div>
-    <div id="bannerControls" class="hidden border-b border-border">
-      <div class="px-5 md:px-12 py-3 flex items-center justify-between">
-        <p class="text-muted text-xs tracking-widest uppercase">Featured · Top Rated</p>
-        <div class="flex items-center gap-4">
+        <div id="bannerControls" class="absolute inset-x-5 md:inset-x-12 bottom-6 z-10 flex items-center justify-between gap-4">
           <div id="bannerDots" class="flex items-center gap-2"></div>
-          <div class="flex gap-1">
-            <button onclick="bannerPrev()" class="w-7 h-7 flex items-center justify-center border border-border text-muted hover:border-accent hover:text-accent transition-colors">‹</button>
-            <button onclick="bannerNext()" class="w-7 h-7 flex items-center justify-center border border-border text-muted hover:border-accent hover:text-accent transition-colors">›</button>
+          <div class="flex gap-2">
+            <button onclick="bannerPrev()" class="nav-btn" aria-label="Previous banner">&#8592;</button>
+            <button onclick="bannerNext()" class="nav-btn" aria-label="Next banner">&#8594;</button>
           </div>
         </div>
+      </section>
+
+      <section id="continueSection" class="hidden px-5 md:px-12 py-8 border-b border-border">
+        <div class="flex items-baseline gap-3 mb-4">
+          <h2 class="font-display text-3xl tracking-widest">Continue Watching</h2>
+          <span class="text-muted text-xs tracking-widest uppercase">Synced when logged in</span>
+        </div>
+        <div id="continueScroll" class="flex gap-2 overflow-x-auto pb-2"></div>
+      </section>
+
+      <section class="px-5 md:px-12 py-7 border-b border-border flex flex-col gap-5">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 id="sectionTitle" class="font-display text-4xl tracking-widest leading-none">Discover</h1>
+            <p id="sectionSub" class="text-muted text-sm tracking-wide mt-1">Top rated & popular</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <div id="sortWrap" class="hidden">
+              <select id="sortSelect" onchange="onSortChange()" class="bg-card border border-border text-light text-xs uppercase tracking-widest px-3 py-2">
+                <option value="smart">Smart sort</option>
+                <option value="relevance">Relevance</option>
+                <option value="rating">Rating</option>
+                <option value="popularity">Popularity</option>
+                <option value="year_desc">Newest</option>
+                <option value="year_asc">Oldest</option>
+              </select>
+            </div>
+            <div id="yearPickerWrap" class="relative">
+              <button onclick="toggleYearPicker()" class="nav-btn"><span id="yearLabel">All Years</span> <span id="yearChevron" class="inline-block transition-transform">&#8964;</span></button>
+              <div id="yearDropdown" class="hidden absolute right-0 mt-2 w-72 bg-surface border border-border z-30 p-4 shadow-2xl">
+                <div class="flex items-center justify-between mb-3">
+                  <button onclick="shiftDecade(-1)" class="nav-btn">&#8592;</button>
+                  <span id="decadeLabel" class="text-xs text-muted tracking-widest uppercase"></span>
+                  <button onclick="shiftDecade(1)" class="nav-btn">&#8594;</button>
+                </div>
+                <button onclick="selectYear(null)" class="w-full border border-border text-muted hover:text-accent hover:border-accent py-2 text-sm mb-2">All Years</button>
+                <div id="yearGrid" class="grid grid-cols-2 gap-1"></div>
+              </div>
+            </div>
+            <button onclick="toggleFilterBar()" class="nav-btn">Filters <span id="filterCount" class="hidden text-accent"></span></button>
+          </div>
+        </div>
+        <div id="filterBar" class="filter-bar">
+          <div>
+            <div class="flex flex-wrap gap-2 pt-1">
+              <button id="typeAll" onclick="setTypeFilter('all')" class="nav-btn type-filter active">All</button>
+              <button id="typeMovie" onclick="setTypeFilter('movie')" class="nav-btn type-filter">Movies</button>
+              <button id="typeTv" onclick="setTypeFilter('tv')" class="nav-btn type-filter">TV</button>
+              <select id="genreSelect" onchange="setGenreFilter(this.value)" class="bg-card border border-border text-light text-xs uppercase tracking-widest px-3 py-2"><option value="">Any Genre</option></select>
+              <select id="ratingSelect" onchange="setRatingFilter(this.value)" class="bg-card border border-border text-light text-xs uppercase tracking-widest px-3 py-2">
+                <option value="">Any Rating</option><option value="7">7+</option><option value="8">8+</option><option value="9">9+</option>
+              </select>
+              <select id="votesSelect" onchange="setVotesFilter(this.value)" class="bg-card border border-border text-light text-xs uppercase tracking-widest px-3 py-2">
+                <option value="">Any Votes</option><option value="500">500+</option><option value="1000">1,000+</option><option value="5000">5,000+</option>
+              </select>
+              <button onclick="clearAllFilters()" class="nav-btn">Clear</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <p id="status" class="px-5 md:px-12 pb-3 text-xs tracking-widest uppercase min-h-5 text-muted"></p>
+      <section id="grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 px-5 md:px-12 pb-12"></section>
+      <div id="spinner" class="hidden text-center text-muted text-xs tracking-widest uppercase pb-8">Loading...</div>
+      <div id="sentinel" class="h-8"></div>
+    </main>
+
+    <div id="modalBackdrop" class="modal-backdrop" onclick="backdropClose(event)">
+      <div class="max-w-4xl mx-auto bg-surface border border-border grid md:grid-cols-[280px_1fr] relative">
+        <button onclick="closeModal()" class="absolute right-3 top-3 z-10 nav-btn" aria-label="Close">&times;</button>
+        <div id="modalPoster" class="relative bg-card min-h-80"></div>
+        <div id="modalBody" class="p-6 md:p-8 flex flex-col gap-4"></div>
       </div>
     </div>
-  </div>
 
-  <!-- ── CONTINUE WATCHING ── -->
-  <div id="continueSection" class="hidden px-5 md:px-12 pt-8 pb-2">
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-baseline gap-3">
-        <!-- Animated pulse dot -->
-        <span class="relative flex h-2 w-2 mt-1">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-60"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
-        </span>
-        <h2 class="font-display text-2xl tracking-widest text-light">Continue Watching</h2>
-      </div>
-      <button onclick="clearAllHistory()"
-              class="text-xs tracking-widest uppercase text-muted hover:text-danger transition-colors">
-        Clear All
-      </button>
+    <div id="authModal" class="hidden fixed inset-0 z-[90] bg-black/80 backdrop-blur-sm p-5 flex items-center justify-center">
+      <form id="authForm" class="w-full max-w-sm bg-surface border border-border p-5 flex flex-col gap-3">
+        <div class="flex items-center justify-between gap-4">
+          <h2 id="authTitle" class="font-display text-3xl tracking-widest">Login</h2>
+          <button type="button" data-close-auth class="nav-btn" aria-label="Close">&times;</button>
+        </div>
+        <input id="nameField" name="displayName" class="hidden bg-bg border border-border text-light px-3 py-2 outline-none focus:border-accent" placeholder="Display name" />
+        <input name="email" type="email" required class="bg-bg border border-border text-light px-3 py-2 outline-none focus:border-accent" placeholder="Email" />
+        <input name="password" type="password" required minlength="6" class="bg-bg border border-border text-light px-3 py-2 outline-none focus:border-accent" placeholder="Password" />
+        <p id="authError" class="min-h-5 text-danger text-xs"></p>
+        <button id="authSubmit" class="nav-btn nav-btn-primary" type="submit">Login</button>
+        <button id="authModeToggle" class="text-muted hover:text-accent text-xs uppercase tracking-widest" type="button">Create new account</button>
+      </form>
     </div>
-    <div id="continueScroll"></div>
-  </div>
 
-  <!-- ── SECTION LABEL ── -->
-  <div class="px-5 md:px-12 pt-8 pb-3 flex items-baseline gap-3">
-    <h2 id="sectionTitle" class="font-display text-3xl tracking-widest text-light">Discover</h2>
-    <span id="sectionSub" class="text-muted text-xs tracking-widest uppercase">Top rated &amp; popular</span>
-  </div>
-
-  <p id="status" class="px-5 md:px-12 pb-3 text-xs tracking-widest uppercase text-muted min-h-5"></p>
-
-  <!-- ── GRID ── -->
-  <main id="grid" class="grid gap-0.5 px-5 md:px-12 pb-6"
-        style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))"></main>
-
-  <div id="sentinel"></div>
-  <div id="spinner" class="hidden py-10 flex justify-center">
-    <div class="spinner-ring w-5 h-5 border-2 border-border border-t-accent rounded-full"></div>
-  </div>
-
-  <!-- ── MODAL ── -->
-  <div id="modalBackdrop" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 opacity-0 pointer-events-none" onclick="backdropClose(event)">
-    <div id="modal" class="bg-surface border border-border w-full max-w-3xl grid md:grid-cols-[240px_1fr] relative translate-y-6">
-      <button onclick="closeModal()" class="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center border border-border text-muted hover:text-light hover:border-light transition-colors bg-bg text-sm">✕</button>
-      <div id="modalPoster" class="relative overflow-hidden min-h-[240px] md:min-h-0"></div>
-      <div id="modalBody" class="p-7 flex flex-col gap-4 overflow-y-auto" style="max-height:90vh"></div>
-    </div>
-  </div>
-
-  <script src="script.js"></script>
-
-  <script>
-    // Clear all history helper (called from index.html button)
-    function clearAllHistory() {
-      try {
-        const h = JSON.parse(localStorage.getItem('cs_watch_history') || '[]');
-        h.forEach(i => localStorage.removeItem(`cs_progress_${i.type}_${i.id}`));
-        localStorage.removeItem('cs_watch_history');
-      } catch {}
-      renderContinueWatching();
-    }
-  </script>
-</body>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>

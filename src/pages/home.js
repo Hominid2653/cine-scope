@@ -2,7 +2,10 @@
 //  CINESCOPE — script.js  (TMDB only)
 // ─────────────────────────────────────────────────────────────
 
-const TMDB_KEY  = '2a90a66535588ab6ad8c190707a04852';
+import { initUserSession, getHistory as loadHistory, isInList, onUserChange, removeHistoryEntry, toggleListItem } from '../services/userData.js';
+import { mountAuthUi, requireAccountMessage } from '../services/authUi.js';
+
+const TMDB_KEY  = import.meta.env.VITE_TMDB_KEY;
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const IMG_BASE  = 'https://image.tmdb.org/t/p/';
 const NOW_YEAR  = new Date().getFullYear();
@@ -87,6 +90,9 @@ observer.observe(sentinel);
 
 // ── Bootstrap ──────────────────────────────────────────────
 (async () => {
+  initUserSession();
+  mountAuthUi();
+  onUserChange(() => renderContinueWatching());
   await fetchGenres();
   buildYearGrid();
   renderContinueWatching();
@@ -99,15 +105,12 @@ observer.observe(sentinel);
 //  CONTINUE WATCHING
 // ──────────────────────────────────────────────────────────
 function getHistory() {
-  try { return JSON.parse(localStorage.getItem('cs_watch_history') || '[]'); } catch { return []; }
+  return loadHistory();
 }
 
-function removeFromHistory(id, type) {
+async function removeFromHistory(id, type) {
   try {
-    let h = getHistory().filter(i => !(String(i.id) === String(id) && i.type === type));
-    localStorage.setItem('cs_watch_history', JSON.stringify(h));
-    // Also remove progress entry
-    localStorage.removeItem(`cs_progress_${type}_${id}`);
+    await removeHistoryEntry(id, type);
     renderContinueWatching();
   } catch {}
 }
@@ -682,6 +685,18 @@ async function openModal(id, type) {
     const director= (m.credits?.crew || []).find(c => c.job === 'Director')?.name || '';
     const cast    = (m.credits?.cast || []).slice(0, 6).map(c => c.name).join(', ');
     const tagline = m.tagline ? `<p class="italic text-sm" style="color:#6b6b82">"${escHtml(m.tagline)}"</p>` : '';
+    const listItem = {
+      id: m.id,
+      type,
+      title,
+      poster: m.poster_path || null,
+      backdrop: m.backdrop_path || null,
+      year,
+      rating,
+    };
+    const listPayload = encodeURIComponent(JSON.stringify(listItem));
+    const favoriteLabel = isInList('favorites', m.id, type) ? 'Favorited' : 'Favorite';
+    const watchlistLabel = isInList('watchlist', m.id, type) ? 'In Watchlist' : 'Watchlist';
 
     // Progress for this title
     const saved = (() => { try { return JSON.parse(localStorage.getItem(`cs_progress_${type}_${id}`)); } catch { return null; } })();
@@ -731,11 +746,16 @@ async function openModal(id, type) {
       ${tagline}
       <p class="text-sm leading-relaxed" style="color:#9090a8">${escHtml(overview)}</p>
       ${progressHTML}
-      <button onclick="goWatch(${m.id},'${type}')"
-              class="bg-accent hover:bg-yellow-300 transition-colors text-bg font-display tracking-widest px-6 py-2.5 text-base flex items-center gap-2 w-fit">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        ${pct > 2 ? 'Resume' : 'Watch Now'}
-      </button>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="goWatch(${m.id},'${type}')"
+                class="bg-accent hover:bg-yellow-300 transition-colors text-bg font-display tracking-widest px-6 py-2.5 text-base flex items-center gap-2 w-fit">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          ${pct > 2 ? 'Resume' : 'Watch Now'}
+        </button>
+        <button onclick="toggleFavorite('${listPayload}')" class="nav-btn">${favoriteLabel}</button>
+        <button onclick="toggleWatchlist('${listPayload}')" class="nav-btn">${watchlistLabel}</button>
+      </div>
+      <p class="text-muted text-xs">${requireAccountMessage()}</p>
       <div class="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border pt-4">${details}${seasons}</div>`;
 
   } catch (err) {
@@ -754,6 +774,48 @@ function goWatch(id, type) { location.href = `watch.html?id=${id}&type=${type}`;
 // ──────────────────────────────────────────────────────────
 //  UTIL
 // ──────────────────────────────────────────────────────────
+async function toggleFavorite(payload) {
+  await toggleSavedList('favorites', payload);
+}
+
+async function toggleWatchlist(payload) {
+  await toggleSavedList('watchlist', payload);
+}
+
+async function toggleSavedList(listName, payload) {
+  try {
+    const item = JSON.parse(decodeURIComponent(payload));
+    await toggleListItem(listName, item);
+    await openModal(item.id, item.type);
+  } catch (error) {
+    setStatus(error.message || 'Could not update list.', true);
+  }
+}
+
+Object.assign(window, {
+  backdropClose,
+  bannerNext,
+  bannerPrev,
+  clearAllFilters,
+  clearSearch,
+  closeModal,
+  goWatch,
+  onSortChange,
+  openModal,
+  removeFromHistory,
+  selectYear,
+  setGenreFilter,
+  setRatingFilter,
+  setTypeFilter,
+  setVotesFilter,
+  shiftDecade,
+  toggleFavorite,
+  toggleFilterBar,
+  toggleWatchlist,
+  toggleYearPicker,
+  triggerSearch,
+});
+
 function escHtml(s) {
   return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
